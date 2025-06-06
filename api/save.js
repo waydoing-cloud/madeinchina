@@ -11,7 +11,6 @@ function getAuth() {
   });
 }
 
-// 🔧 вспомогательная функция для чтения тела
 async function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -29,8 +28,6 @@ module.exports = async (req, res) => {
 
   try {
     const rawBody = await readBody(req);
-
-    console.log('[RAW BODY]', rawBody);
     
     const { ip, device } = JSON.parse(rawBody);
 
