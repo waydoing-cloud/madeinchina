@@ -1,41 +1,48 @@
-const fs = require('fs');
-const path = require('path');
+const { google } = require('googleapis');
 
-function getDate(name) {
-    const now = new Date();
-    return `${name}-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+function getAuth() {
+  const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+  return new google.auth.GoogleAuth({
+    credentials: {
+      client_email: creds.client_email,
+      private_key: creds.private_key,
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
 }
 
 module.exports = async (req, res) => {
-    if (req.method !== 'POST') {
-        res.statusCode = 405;
-        return res.end('Only POST allowed');
+  if (req.method !== 'POST') {
+    res.statusCode = 405;
+    return res.end('Only POST allowed');
+  }
+
+  let body = '';
+  req.on('data', chunk => (body += chunk));
+  req.on('end', async () => {
+    try {
+      const { ip, device } = JSON.parse(body);
+      const auth = await getAuth();
+      const sheets = google.sheets({ version: 'v4', auth });
+
+      const spreadsheetId = '1m5bjgTRZHJORX_6lkp5BfJdkRB2r32LwNUPgLgzBb6c'; // вставь сюда свой ID
+      const now = new Date().toISOString();
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: 'Main!A:F',
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [[now, ip, device, '', '', '']],
+        },
+      });
+
+      res.statusCode = 200;
+      res.end('Saved to Google Sheets');
+    } catch (err) {
+      console.error(err);
+      res.statusCode = 500;
+      res.end('Error saving to Sheets');
     }
-
-    let body = '';
-    req.on('data', chunk => {
-        body += chunk;
-    });
-
-    req.on('end', () => {
-        try {
-            const { ip, device } = JSON.parse(body);
-            const folderName = getDate('IPDEVICE');
-            const dataDir = path.join(__dirname, '..', 'data', folderName);
-
-            if (!fs.existsSync(dataDir)) {
-                fs.mkdirSync(dataDir, { recursive: true });
-            }
-
-            fs.writeFileSync(path.join(dataDir, 'ipInfo.json'), JSON.stringify({ ip }, null, 2), 'utf-8');
-            fs.writeFileSync(path.join(dataDir, 'deviceInfo.json'), JSON.stringify({ device }, null, 2), 'utf-8');
-
-            res.statusCode = 200;
-            res.end('OK');
-        } catch (e) {
-            console.error(e);
-            res.statusCode = 500;
-            res.end('Server error');
-        }
-    });
+  });
 };
