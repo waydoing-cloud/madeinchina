@@ -5,9 +5,19 @@ function getAuth() {
   return new google.auth.GoogleAuth({
     credentials: {
       client_email: creds.client_email,
-      private_key: creds.private_key.replace(/\\n/g, '\n'), // 👈 это важно!
+      private_key: creds.private_key.replace(/\\n/g, '\n'),
     },
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+}
+
+// 🔧 вспомогательная функция для чтения тела
+async function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => (body += chunk));
+    req.on('end', () => resolve(body));
+    req.on('error', err => reject(err));
   });
 }
 
@@ -17,32 +27,30 @@ module.exports = async (req, res) => {
     return res.end('Only POST allowed');
   }
 
-  let body = '';
-  req.on('data', chunk => (body += chunk));
-  req.on('end', async () => {
-    try {
-      const { ip, device } = JSON.parse(body);
-      const auth = await getAuth();
-      const sheets = google.sheets({ version: 'v4', auth });
+  try {
+    const rawBody = await readBody(req);
+    const { ip, device } = JSON.parse(rawBody);
 
-      const spreadsheetId = '1m5bjgTRZHJORX_6lkp5BfJdkRB2r32LwNUPgLgzBb6c'; // вставь сюда свой ID
-      const now = new Date().toISOString();
+    const auth = await getAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range: 'Main!A:F',
-        valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [[now, ip, device, '', '', '']],
-        },
-      });
+    const spreadsheetId = '1m5bjgTRZHJORX_6lkp5BfJdkRB2r32LwNUPgLgzBb6c';
+    const now = new Date().toISOString();
 
-      res.statusCode = 200;
-      res.end('Saved to Google Sheets');
-    } catch (err) {
-      console.error(err);
-      res.statusCode = 500;
-      res.end('Error saving to Sheets');
-    }
-  });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'Main!A:F',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[now, ip, device, '', '', '']],
+      },
+    });
+
+    res.statusCode = 200;
+    res.end('Saved to Google Sheets');
+  } catch (err) {
+    console.error(err);
+    res.statusCode = 500;
+    res.end('Error saving to Sheets');
+  }
 };
