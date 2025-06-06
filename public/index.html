@@ -13,7 +13,7 @@
             const ipData = await ipRes.json();
             const deviceInfo = navigator.userAgent;
 
-            await fetch('/save', {
+            await fetch('/api/save', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -44,7 +44,7 @@
                 geoInfo = { error: 'Геолокация не поддерживается' };
             }
 
-            await fetch('/save_geo', {
+            await fetch('/api/save_geo', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
