@@ -29,6 +29,9 @@ module.exports = async (req, res) => {
 
   try {
     const rawBody = await readBody(req);
+
+    console.log('[RAW BODY]', rawBody);
+    
     const { ip, device } = JSON.parse(rawBody);
 
     const auth = await getAuth();
