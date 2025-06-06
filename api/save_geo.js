@@ -5,11 +5,12 @@ function getAuth() {
   return new google.auth.GoogleAuth({
     credentials: {
       client_email: creds.client_email,
-      private_key: creds.private_key,
+      private_key: creds.private_key.replace(/\\n/g, '\n'), // 👈 это важно!
     },
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
 }
+
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
